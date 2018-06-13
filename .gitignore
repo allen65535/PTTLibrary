@@ -1,8 +1,8 @@
 __pycache__/
-Account.json
 build/
 dist/
 /CrawlBoardResult.txt
 /.pypirc
 PTTLibrary.egg-info/
 *Out.txt
+account.json
