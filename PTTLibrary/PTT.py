@@ -982,6 +982,71 @@ class Library(object):
             return ErrCode
         else:
             self.Log('前往看板' + Board + '成功!!!')
+
+    def gotoArticle(self, PostIndex=0):
+        ConnectIndex = 0
+        self.Log('前往文章前')
+        SendMessage = ''
+
+        SendMessage += str(PostIndex) + '\r'
+
+        CatchList = []
+        ErrCode, CatchIndex = self.__operatePTT(ConnectIndex, SendMessage=SendMessage, CatchTargetList=CatchList, Refresh=True)
+        self.Log('前往文章後')
+        if ErrCode != ErrorCode.Success:
+            self.Log('前往文章' + str(PostIndex) + '失敗')
+            self.__ErrorCode = ErrCode
+            return ErrCode
+        else:
+            self.Log('前往文章' + str(PostIndex) + '成功!!!')
+
+    def editArticle(self, content=''):
+        ConnectIndex = 0
+        self.Log('編輯文章前')
+        SendMessage = ''
+        SendMessage += '\x45' #E
+
+        CatchList = [
+        ]
+        ErrCode, CatchIndex = self.__operatePTT(ConnectIndex, SendMessage=SendMessage, CatchTargetList=CatchList, Refresh=True)
+        if ErrCode != ErrorCode.Success:
+            self.__ErrorCode = ErrCode
+            self.Log('進入編輯文章失敗')
+            return ErrCode
+        
+        SendMessage = '\x14' # ctrl+T go to the very end
+        ErrCode, CatchIndex = self.__operatePTT(ConnectIndex, SendMessage=SendMessage, Refresh=True)
+        if ErrCode != ErrorCode.Success:
+            self.__ErrorCode = ErrCode
+            self.Log('到文章底部失敗')
+            return ErrCode
+
+        SendMessage = str(content) + '\x18'
+
+        self.Log('嘗試儲存文章', LogLevel.DEBUG)
+
+        CatchList = [
+            # 0
+            '確定要儲存檔案嗎',
+        ]
+        ErrCode, CatchIndex = self.__operatePTT(ConnectIndex, SendMessage=SendMessage, CatchTargetList=CatchList, Refresh=True)
+
+        if ErrCode != ErrorCode.Success:
+            self.__ErrorCode = ErrCode
+            self.Log('儲存編輯文章失敗')
+            return ErrCode
+
+        if CatchIndex == 0:
+            self.Log('儲存檔案')
+            SendMessage = 's\r'
+            CatchList = []
+            ErrCode, CatchIndex = self.__operatePTT(ConnectIndex, SendMessage=SendMessage, CatchTargetList=CatchList, Refresh=True)
+        else:
+            ErrCode = ErrorCode.UnknowError
+            self.__ErrorCode = ErrCode
+            self.Log('儲存編輯文章發生未知錯誤')
+            return ErrCode
+
         
     def push(self, Board, inputPushType, PushContent, PostID='', PostIndex=0):
         
