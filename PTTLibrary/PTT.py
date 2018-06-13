@@ -236,10 +236,10 @@ class Library(object):
     def __operatePTT(self, ConnectIndex, SendMessage='', CatchTargetList=[], Refresh=False, ExtraWait=0):
         
         SendMessageTimeout = 10.0
-        PreWait = 0.01
-        EveryWait = 0.01
+        PreWait = 0.05
+        EveryWait = 0.05
 
-        MaxEveryWait = 0.1
+        MaxEveryWait = 0.5
         MinEveryWait = 0.01
 
         if CatchTargetList == None:
@@ -266,7 +266,7 @@ class Library(object):
                         TimeCout = 0
                         NowTime = time.time()
                         if (NowTime - StartTime) >= SendMessageTimeout:
-                            self.Log('超時斷線，重新連線')
+                            self.Log('超時斷線，重新連線0')
                             self.__connectRemote(ConnectIndex)
                             return self.__operatePTT(ConnectIndex, SendMessage, CatchTargetList, Refresh, ExtraWait)
                     TimeCout += 1
@@ -283,7 +283,7 @@ class Library(object):
                     TimeCout = 0
                     NowTime = time.time()
                     if (NowTime - StartTime) >= SendMessageTimeout:
-                        self.Log('超時斷線，重新連線')
+                        self.Log('超時斷線，重新連線1')
                         self.__connectRemote(ConnectIndex)
                         return self.__operatePTT(ConnectIndex, SendMessage, CatchTargetList, Refresh, ExtraWait)
                 TimeCout += 1
@@ -963,6 +963,26 @@ class Library(object):
         ErrCode = ErrorCode.Success
         self.__ErrorCode = ErrCode
         return ErrCode
+
+    def gotoBoard(self, Board):
+        ConnectIndex = 0
+        SendMessage = ''
+
+        if '看板《' + Board + '》' in self.__ReceiveData[ConnectIndex] and '文章選讀' in self.__ReceiveData[ConnectIndex]:
+            self.Log('已經位於 ' + Board + ' 板', LogLevel.DEBUG)
+        else:
+            # 前進至板面
+            SendMessage += '\x1b\x4fD\x1b\x4fD\x1b\x4fD\x1b\x4fDqs' + Board + '\r\x03\x03 '
+
+        CatchList = []
+        ErrCode, CatchIndex = self.__operatePTT(ConnectIndex, SendMessage=SendMessage, CatchTargetList=CatchList, Refresh=True)
+        if ErrCode != ErrorCode.Success:
+            self.Log('前往看板' + Board + '失敗')
+            self.__ErrorCode = ErrCode
+            return ErrCode
+        else:
+            self.Log('前往看板' + Board + '成功!!!')
+        
     def push(self, Board, inputPushType, PushContent, PostID='', PostIndex=0):
         
         self.__IdleTime = 0
