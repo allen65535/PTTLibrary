@@ -14,6 +14,56 @@ BoardList = ['Wanted', 'Gossiping', 'Test', 'NBA', 'Baseball', 'LOL', 'C_Chat']
 PTTBot = None
 ResPath = './OldBug/'
 
+# 聯想tempo遊戲流程規劃
+def thinkTempo():
+    # var init
+    HINT_TIME = 30
+
+    # init題目
+    questions = ['把握', '心電圖', '得罪']
+
+    # 接受報名
+    answerPlayers = []
+    hintPlayers = []
+    PostIndex = 500  # 接受文章號碼
+
+    gamePrepared = False
+    pushCheckedCount = 0
+    
+    # 持續檢查報名狀況
+    while(not gamePrepared):
+        ErrCode, Post = PTTBot.getPost(Board, PostIndex=PostIndex)
+        if ErrCode != PTT.ErrorCode.Success:
+            PTTBot.Log('使用文章編號取得文章詳細資訊失敗 錯誤碼: ' + str(ErrCode))
+
+        # skip pushCheckedCount pushes
+        for Push in Post.getPushList()[pushCheckedCount:]: 
+            author = Push.getAuthor()
+            content = Push.getContent()
+            # if 有報名指令  answerPlayers.push(author)...
+        
+        # wait 10 sec
+        # if time is due or there are enougth players
+        #  =>  gamePrepared = True
+    
+
+    #開始遊戲
+    # 推文 遊戲開始!
+    for question in questions:
+        for hintPlayer in hintPlayers:
+            # 寄送 question 給 hintPlayer
+        # wait 30 secs
+
+        # 推文 ══════════╡ 提示開始 ╞══════════
+        # wait HINT_TIME
+        # 推文 ══════════╡ 提示結束 ╞══════════
+        roundComplete = False
+        while(not roundComplete):
+            # 取得新的推文
+            # if 推文為答題者第一次回答 and 正確  
+            #   roundComplete = True
+            #   推文  =========答體者: 答案 答對! [比數]
+            
 def DetectAndEditPost():
     Board = 'TEST'  # 看板
     PostIndex = 500  # 文章號碼
