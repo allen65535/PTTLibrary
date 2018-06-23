@@ -3,6 +3,7 @@ import time
 import json
 import getpass
 import codecs
+import re
 from PTTLibrary import PTT
 from PTTLibrary import Big5uao
 
@@ -13,6 +14,26 @@ BoardList = ['Wanted', 'Gossiping', 'Test', 'NBA', 'Baseball', 'LOL', 'C_Chat']
 
 PTTBot = None
 ResPath = './OldBug/'
+
+def CheckAnsInArticle(board, postIndex, answer, skipNumberOfPushes = 0):
+    ErrCode, Post = PTTBot.getPost(board, PostIndex=postIndex)
+    if ErrCode != PTT.ErrorCode.Success:
+        PTTBot.Log('使用文章編號取得文章詳細資訊失敗 錯誤碼: ' + str(ErrCode))
+
+    pushList = Post.getPushList()
+    # skip pushCheckedCount pushes
+    for Push in pushList[skipNumberOfPushes:]: 
+        author = Push.getAuthor()
+        content = Push.getContent()
+        found = re.search('\*(.+)', content)
+        if found != None:
+            guess = found.group(1)
+            if guess == answer:
+                print(author + ':' + guess + ' 正確答案!!')
+                break
+            else:
+                print(author + ':' + guess + ' 錯誤...')
+    return author, guess, len(pushList)
 
 # 聯想tempo遊戲流程規劃
 def thinkTempo():
@@ -25,7 +46,8 @@ def thinkTempo():
     # 接受報名
     answerPlayers = []
     hintPlayers = []
-    PostIndex = 500  # 接受文章號碼
+    PostIndex = 500  # 文章號碼
+    Board = 'test'
 
     gamePrepared = False
     pushCheckedCount = 0
@@ -57,12 +79,12 @@ def thinkTempo():
         # 推文 ══════════╡ 提示開始 ╞══════════
         # wait HINT_TIME
         # 推文 ══════════╡ 提示結束 ╞══════════
-        roundComplete = False
-        while(not roundComplete):
-            # 取得新的推文
-            # if 推文為答題者第一次回答 and 正確  
-            #   roundComplete = True
-            #   推文  =========答體者: 答案 答對! [比數]
+            roundComplete = False
+            # while(not roundComplete):
+                # 取得新的推文
+                # if 推文為答題者第一次回答 and 正確  
+                #   roundComplete = True
+                #   推文  =========答體者: 答案 答對! [比數]
             
 def DetectAndEditPost():
     Board = 'TEST'  # 看板
@@ -104,11 +126,13 @@ if __name__ == '__main__':
     PTTBot.Log(ErrCode)
     if ErrCode != PTT.ErrorCode.Success:
         PTTBot.Log('登入失敗')
+        PTTBot.Log(ErrCode)
         sys.exit()
     
     PTTBot.Log('登入成功? 進行動作...')
     try:
-        DetectAndEditPost()
+        author, guess, length = CheckAnsInArticle('turtlesoup', 27233, '玩具', 0)
+        PTTBot.Log(author + ':' + guess + '--' + str(length))
         pass
     except Exception as e:
         print(e)
