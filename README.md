@@ -6,7 +6,7 @@
 安裝
 -------------------
 ```
-pip3 install PTTLibrary
+pip3 install -r requirements.txt
 ```
 
 執行
@@ -22,6 +22,5 @@ python bot.py
 贊助
 -------------------
 ###### 如果這專案有幫助，請去原作者的家請他喝咖啡
-###### 如果這個專案減少了你的開發時間，你可以贊助我一杯咖啡 :D
 ###### XMR 贊助位址
 ###### 448CUe2q4Ecf9tx6rwanrqM9kfCwqpNbhJ5jtrTf9FHqHNq7Lvv9uBoQ74SEaAu9FFceNBr6p3W1yhqPcxPPSSTv2ctufnQ
