@@ -16,12 +16,20 @@ BoardList = ['Wanted', 'Gossiping', 'Test', 'NBA', 'Baseball', 'LOL', 'C_Chat']
 PTTBot = None
 ResPath = './OldBug/'
 
+def SendMail(id, title, content):
+    ErrCode = PTTBot.mail(id, title, content, 0)
+    if ErrCode == PTT.ErrorCode.Success:
+        PTTBot.Log('寄信給 ' + id + ' 成功')
+    else:
+        PTTBot.Log('寄信給 ' + id + ' 失敗')
+
 def Push(board, postIndex, msg):
-    HOST_PUSH_PREFIX = '======='
+    HOST_PUSH_PREFIX = '============'
 
     ErrCode = PTTBot.push(board, PTT.PushType.Push, HOST_PUSH_PREFIX + msg, PostIndex=postIndex)
     if ErrCode == PTT.ErrorCode.Success:
         PTTBot.Log('使用文章編號: 推文成功')
+        return True
     elif ErrCode == PTT.ErrorCode.ErrorInput:
         PTTBot.Log('使用文章編號: 參數錯誤')
         return False
@@ -37,12 +45,14 @@ def writeJsonFile(dictObj):
         json.dump(dictObj, outputFile)
 
 def getPostPushList(board, postIndex, skipNumberOfPushes = 0):
-    PTTBot.Log('取得推文清單, 於:' + board + ', index:' + str(postIndex))
+    PTTBot.Log('取得推文清單, 於:' + board + ', index:' + str(postIndex) + ', skip:' + str(skipNumberOfPushes))
     ErrCode, Post = PTTBot.getPost(board, PostIndex=postIndex)
     if ErrCode != PTT.ErrorCode.Success:
         PTTBot.Log('使用文章編號取得文章詳細資訊失敗 錯誤碼: ' + str(ErrCode))
 
     pushList = Post.getPushList()
+    PTTBot.Log('推文數量:' + str(len(pushList)))
+    PTTBot.Log('skip後推文數量:' + str(len(pushList[skipNumberOfPushes:])))
     return pushList[skipNumberOfPushes:]
 
 def CheckCommandInPustList(command, pushList):
@@ -51,10 +61,11 @@ def CheckCommandInPustList(command, pushList):
     for Push in pushList:
         author = Push.getAuthor()
         content = Push.getContent()
+        PTTBot.Log('檢查推文:' + content + '  ' + command + '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         found = re.search(command, content)
+        count += 1
         if found != None:
             return found, author, count
-        count += 1
     return None, None, len(pushList)
 
 def CheckCommandInArticle(board, postIndex, command, skipNumberOfPushes = 0):
@@ -66,42 +77,37 @@ def CheckCommandInArticle(board, postIndex, command, skipNumberOfPushes = 0):
 def CheckAnsInArticle(board, postIndex, answer, skipNumberOfPushes = 0):
     pushList = getPostPushList(board, postIndex, skipNumberOfPushes)
     # skip pushCheckedCount pushes
+    count = 0
     for Push in pushList: 
         author = Push.getAuthor()
         content = Push.getContent()
         found = re.search(r'\*(.+)', content)
+        count += 1
         if found != None:
             guess = found.group(1)
             if guess == answer:
-                print(author + ':' + guess + ' 正確答案!!')
-                break
-            else:
-                print(author + ':' + guess + ' 錯誤...')
-    return author, guess, len(pushList)
+                return author, guess, count
+    return None, None, len(pushList)
 
 # 聯想tempo遊戲流程規劃
-def thinkTempo():
+def thinkTempoPreparation():
     # var init
-    HINT_TIME = 30
-    HINT_PLAYER_NUMBER = 2
-    GUESS_PLAYER_NUMBER = 4
+    HINT_PLAYER_NUMBER = 3
+    GUESS_PLAYER_NUMBER = 3
 
     PATTERN_REG_HINT = r'\[報名提示\]'
     PATTERN_REG_GUESS = r'\[報名猜題\]'
-
-    # init題目
-    questions = ['把握', '心電圖', '得罪']
 
     # 接受報名
     guessPlayers = []
     hintPlayers = []
     guessPlayerNameMap = {}
     hintPlayerNameMap = {}
-    postIndex = 278  # 文章號碼
-    board = 'test'
+    postIndex = 27257  # 文章號碼
+    board = 'turtlesoup'
 
     gamePrepared = False
-    pushHasCheckedHintRegister = 0
+    pushHasCheckedHintRegister = 100
     pushHasCheckedGuessRegister = 0
     
     # 持續檢查報名狀況
@@ -109,34 +115,50 @@ def thinkTempo():
         PTTBot.Log('檢查報名')
         # 檢查提示報名
         found, author, checkedIndex = CheckCommandInArticle(board, postIndex, PATTERN_REG_HINT, pushHasCheckedHintRegister)
+        PTTBot.Log('已檢查推文數' + str(checkedIndex))
         PTTBot.Log('檢查報名提示完成')
         if found != None:
             PTTBot.Log(author + '報名了提示')
             if (author not in hintPlayers):
-                hintPlayers.append(author)
-                Push(board, postIndex, author + '報名了提示成功')
+                if (len(hintPlayers) == HINT_PLAYER_NUMBER):
+                    Push(board, postIndex, author + '報名了提示失敗，人數已滿')
+                else:
+                    hintPlayers.append(author)
+                    Push(board, postIndex, author + '報名了提示成功')
         else:
             PTTBot.Log('未發現報名提示推文')
         pushHasCheckedHintRegister += checkedIndex
 
         # 檢查猜題報名
-        found, author, checkedIndex = CheckCommandInArticle(board, postIndex, PATTERN_REG_GUESS, pushHasCheckedGuessRegister)
-        if found != None:
-            PTTBot.Log(author + '報名了猜題')
-            if (author not in guessPlayers):
-                guessPlayers.append(author)
-                Push(board, postIndex, author + '報名了猜題成功')
-            else:
-                PTTBot.Log('未發現報名猜題推文')
-        pushHasCheckedGuessRegister += checkedIndex
+        # found, author, checkedIndex = CheckCommandInArticle(board, postIndex, PATTERN_REG_GUESS, pushHasCheckedGuessRegister)
+        # if found != None:
+        #     PTTBot.Log(author + '報名了猜題')
+        #     if (author not in guessPlayers):
+        #         if (len(guessPlayers) == GUESS_PLAYER_NUMBER):
+        #             Push(board, postIndex, author + '報名了猜題失敗，人數已滿')
+        #         else:
+        #             guessPlayers.append(author)
+        #             Push(board, postIndex, author + '報名了猜題成功')
+        #     else:
+        #         PTTBot.Log('未發現報名猜題推文')
+        # pushHasCheckedGuessRegister += checkedIndex
         
         
-        time.sleep(10)
+        time.sleep(4)
 
-        if len(hintPlayers) == HINT_PLAYER_NUMBER and len(guessPlayers) == GUESS_PLAYER_NUMBER:
+        if len(hintPlayers) == HINT_PLAYER_NUMBER:
             gamePrepared = True
     
     PTTBot.Log('遊戲報名準備完成')
+    Push(board, postIndex, '已達報名人數、遊戲報名準備完成')
+    
+    db = TinyDB('db.json')
+    query = Query()
+    if len(db.search(query.key == 'hintPlayers')) == 0:
+        db.insert({'key': 'hintPlayers','value': hintPlayers})
+    else:
+        db.update({'key': 'hintPlayers','value': hintPlayers})
+
 
     #開始遊戲
     # 推文 遊戲開始!
@@ -154,6 +176,60 @@ def thinkTempo():
                 # if 推文為答題者第一次回答 and 正確  
                 #   roundComplete = True
                 #   推文  =========答體者: 答案 答對! [比數]
+def thinkTempoStartGame():
+    # board = 'turtleSoup'
+    board = 'turtlesoup'
+    postIndex = 27257  # 文章號碼
+
+    # init題目
+    questions = ['哈密瓜', '土司機', '吊扇', '草莓', '桌子', '窗戶', '節奏', '足球', '熱水壺', '機器人']
+
+    PTTBot.Log('讀取報名資料')
+    db = TinyDB('db.json')
+    query = Query()
+    hintPlayers = [] # todo get list from db
+
+    scoreMap = {}
+
+    answerCheckedIndex = 100
+
+    PTTBot.Log('遊戲準備開始')
+    Push(board, postIndex, '遊戲準備開始!!!!')
+    round = 0
+    for question in questions:
+        round += 1
+        PTTBot.Log('遊戲第' + str(round) + '開始')
+        
+        Push(board, postIndex, '準備寄送題目')
+        PTTBot.Log('寄送題目')
+        for hintPlayer in hintPlayers:
+            SendMail(hintPlayer, '聯想tempo題目' + str(round), question)
+        
+        
+        Push(board, postIndex, '題目已寄送')
+        time.sleep(10)
+        Push(board, postIndex, '提示開始')
+
+        roundComplete = False
+        while(not roundComplete):
+            PTTBot.Log('檢查答案')
+            author, guess, checkedIndex = CheckAnsInArticle(board, postIndex, question, answerCheckedIndex)
+            answerCheckedIndex += checkedIndex
+            if author != None:
+                if author not in scoreMap:
+                    scoreMap[author] = 1
+                else:
+                    scoreMap[author] = scoreMap[author] + 1
+                Push(board, postIndex, '恭喜' + author + ':' + question + ' 答對(' + str(scoreMap[author]) + '分)')
+                roundComplete = True
+            time.sleep(3)
+    
+    Push(board, postIndex, '遊戲結束，感謝大家!')
+    if len(db.search(query.key == 'scores')) == 0:
+        db.insert({'key': 'scores','value': scoreMap})
+    else:
+        db.update({'key': 'scores','value': scoreMap})
+
             
 def DetectAndEditPost():
     Board = 'TEST'  # 看板
@@ -200,9 +276,9 @@ if __name__ == '__main__':
     
     PTTBot.Log('登入成功? 進行動作...')
     try:
-        # author, guess, length = CheckAnsInArticle('turtlesoup', 27233, '玩具', 0)
-        # PTTBot.Log(author + ':' + guess + '--' + str(length))
-        thinkTempo()
+        # getPostPushList('turtlesoup', 27257)
+        # thinkTempoPreparation()
+        thinkTempoStartGame()
         pass
     except Exception as e:
         print(e)
